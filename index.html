@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D2C Channel &amp; Product Performance - 2024</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  // Fallback CDN if the first one is unreachable
+  window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"><\/script>');
+</script>
+<style>
+  :root {
+    --page: #F3F5F2;
+    --surface: #FFFFFF;
+    --ink: #1E2B2A;
+    --muted: #5E6B69;
+    --rule: #DDE3DF;
+    --spruce: #2F5D57;
+    --spruce-soft: #E4ECE9;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Header + filters */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(243, 245, 242, 0.94);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .topbar-inner {
+    max-width: 1320px; margin: 0 auto; padding: 14px 28px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600; font-size: 1.45rem;
+    letter-spacing: -0.01em; margin: 0; line-height: 1.2;
+  }
+  .scope { color: var(--muted); font-size: 0.875rem; margin: 2px 0 0; }
+  .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+  .filter { display: flex; flex-direction: column; gap: 3px; }
+  .filter label { font-size: 0.75rem; color: var(--muted); }
+  select, button {
+    font: inherit; font-size: 0.875rem; color: var(--ink);
+    background: var(--surface); border: 1px solid #C9D2CD; border-radius: 6px;
+    padding: 7px 10px; min-height: 36px;
+  }
+  select { min-width: 138px; cursor: pointer; }
+  button.reset { background: var(--spruce); color: #fff; border-color: var(--spruce); cursor: pointer; padding: 7px 16px; }
+  button.reset:hover { background: #244A45; }
+  select:focus-visible, button:focus-visible, th button:focus-visible {
+    outline: 2px solid var(--spruce); outline-offset: 2px;
+  }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 24px 28px 40px; }
+
+  .notice {
+    display: none; margin: 0 0 18px; padding: 12px 16px; border-radius: 8px;
+    background: #FFF6E5; border: 1px solid #F0D9A8; color: #6B4A10;
+  }
+  .notice.show { display: block; }
+
+  /* KPI band: one lead figure, five supporting stats */
+  .kpis {
+    display: grid; grid-template-columns: minmax(260px, 1fr) 2.2fr;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+    overflow: hidden; margin-bottom: 28px;
+  }
+  .lead { padding: 22px 26px; background: var(--spruce); color: #fff; }
+  .lead .label { font-size: 0.875rem; opacity: 0.85; }
+  .lead .value {
+    font-family: var(--serif); font-size: clamp(2rem, 3.4vw, 2.75rem);
+    font-weight: 600; line-height: 1.1; margin: 6px 0 8px; letter-spacing: -0.02em;
+  }
+  .lead .sub { font-size: 0.875rem; opacity: 0.85; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); }
+  .stat { padding: 22px 20px; border-left: 1px solid var(--rule); }
+  .stat .label { font-size: 0.8125rem; color: var(--muted); }
+  .stat .value { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; margin-top: 6px; line-height: 1.2; }
+
+  /* Sections */
+  section { margin-bottom: 30px; }
+  h2 {
+    font-family: var(--serif); font-size: 1.2rem; font-weight: 600;
+    margin: 0 0 12px; letter-spacing: -0.005em;
+  }
+  .grid { display: grid; gap: 16px; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-products { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr); align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px 18px; min-width: 0; }
+  .panel h3 { font-size: 0.9375rem; font-weight: 600; margin: 0 0 10px; }
+  .chart-box { position: relative; height: 260px; }
+  .chart-box.tall { height: 520px; }
+  .chart-box.trend { height: 280px; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th, td { padding: 8px 9px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-weight: 600; color: var(--muted); font-size: 0.8125rem; background: var(--surface); }
+  th button {
+    all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border-radius: 4px;
+  }
+  th button:hover { color: var(--ink); }
+  th[aria-sort="ascending"] button::after { content: "\25B2"; font-size: 0.6rem; }
+  th[aria-sort="descending"] button::after { content: "\25BC"; font-size: 0.6rem; }
+  th[aria-sort="ascending"], th[aria-sort="descending"] { color: var(--ink); }
+  tbody tr:hover td { background: #F7F9F7; }
+  .products td.cat { text-align: left; color: var(--muted); }
+  .products th.cat { text-align: left; }
+
+  .matrix td, .matrix th { text-align: right; }
+  .matrix td:first-child, .matrix th:first-child { text-align: left; }
+  .matrix td.cell { transition: background-color 0.2s; }
+  .matrix tr.total td, .matrix td.total { font-weight: 600; background: var(--spruce-soft); }
+  .matrix tr.total td { border-bottom: none; }
+  .empty-row td { text-align: left; color: var(--muted); padding: 16px 10px; }
+
+  footer { color: var(--muted); font-size: 0.8125rem; border-top: 1px solid var(--rule); padding-top: 14px; }
+
+  @media (max-width: 1100px) {
+    .kpis { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(3, 1fr); }
+    .stat { border-left: none; border-top: 1px solid var(--rule); }
+    .stat:not(:nth-child(3n+1)) { border-left: 1px solid var(--rule); }
+    .grid-products { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .topbar { position: static; }
+    .topbar-inner, main { padding-left: 16px; padding-right: 16px; }
+    .filters { width: 100%; }
+    .filter { flex: 1 1 140px; }
+    select { min-width: 0; width: 100%; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stat:not(:nth-child(3n+1)) { border-left: none; }
+    .stat:nth-child(2n) { border-left: 1px solid var(--rule); }
+    .stat:last-child { grid-column: span 2; }
+    .chart-box.tall { height: 480px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .matrix td.cell { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <h1>D2C Channel &amp; Product Performance &ndash; 2024</h1>
+      <p class="scope" id="scope">Showing all orders</p>
+    </div>
+    <div class="filters" role="group" aria-label="Filters">
+      <div class="filter">
+        <label for="f-channel">Channel</label>
+        <select id="f-channel"></select>
+      </div>
+      <div class="filter">
+        <label for="f-category">Category</label>
+        <select id="f-category"></select>
+      </div>
+      <div class="filter">
+        <label for="f-segment">Customer segment</label>
+        <select id="f-segment"></select>
+      </div>
+      <button class="reset" id="reset" type="button">Reset filters</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <p class="notice" id="notice" role="status">No orders match these filters. Choose different filters or reset them to see all orders.</p>
+
+  <div class="kpis" aria-label="Key metrics">
+    <div class="lead">
+      <div class="label">Net revenue</div>
+      <div class="value num" id="k-revenue">&ndash;</div>
+      <div class="sub num" id="k-gross">&nbsp;</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="label">Orders</div><div class="value num" id="k-orders">&ndash;</div></div>
+      <div class="stat"><div class="label">Units</div><div class="value num" id="k-units">&ndash;</div></div>
+      <div class="stat"><div class="label">Avg order value</div><div class="value num" id="k-aov">&ndash;</div></div>
+      <div class="stat"><div class="label">Total discount</div><div class="value num" id="k-discount">&ndash;</div></div>
+      <div class="stat"><div class="label">Effective discount</div><div class="value num" id="k-effdisc">&ndash;</div></div>
+    </div>
+  </div>
+
+  <section aria-labelledby="h-channel">
+    <h2 id="h-channel">Channel performance</h2>
+    <div class="grid grid-3">
+      <div class="panel">
+        <h3>Net revenue by channel</h3>
+        <div class="chart-box"><canvas id="c-ch-revenue" role="img" aria-label="Bar chart of net revenue by channel"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Effective discount by channel</h3>
+        <div class="chart-box"><canvas id="c-ch-discount" role="img" aria-label="Bar chart of effective discount percentage by channel"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Share of orders by channel</h3>
+        <div class="chart-box"><canvas id="c-ch-orders" role="img" aria-label="Doughnut chart of order share by channel"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-product">
+    <h2 id="h-product">Product performance</h2>
+    <div class="grid grid-products">
+      <div class="panel">
+        <h3>Net revenue by product</h3>
+        <div class="chart-box tall"><canvas id="c-products" role="img" aria-label="Horizontal bar chart of net revenue by product"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Product details</h3>
+        <div class="table-wrap">
+          <table class="products" id="t-products">
+            <thead>
+              <tr>
+                <th data-key="product"><button type="button">Product</button></th>
+                <th data-key="category" class="cat"><button type="button">Category</button></th>
+                <th data-key="orders"><button type="button">Orders</button></th>
+                <th data-key="units"><button type="button">Units</button></th>
+                <th data-key="gross"><button type="button">Gross value</button></th>
+                <th data-key="revenue"><button type="button">Net revenue</button></th>
+                <th data-key="disc"><button type="button">Discount %</button></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-trend">
+    <h2 id="h-trend">Monthly net revenue</h2>
+    <div class="panel">
+      <div class="chart-box trend"><canvas id="c-trend" role="img" aria-label="Line chart of monthly net revenue for 2024"></canvas></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-matrix">
+    <h2 id="h-matrix">Net revenue by category and channel</h2>
+    <div class="panel">
+      <div class="table-wrap">
+        <table class="matrix" id="t-matrix"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Net revenue = MRP &times; quantity &times; (1 &minus; discount % / 100), using each product&rsquo;s discount on the channel where the order was placed.
+    Effective discount = total discount &divide; gross value.
+  </footer>
+</main>
+
+<script>
+const DATA = [{"order_id":1021,"order_date":"2024-01-04","month":"2024-01","channel":"Amazon","category":"Haircare","product_name":"Shampoo 250ml","customer_segment":"Gold","quantity":1,"MRP":2169,"discount_pct":12,"gross_value":2169,"revenue":1908.72},{"order_id":1046,"order_date":"2024-01-15","month":"2024-01","channel":"WhatsApp","category":"Haircare","product_name":"Hair Oil","customer_segment":"Gold","quantity":3,"MRP":777,"discount_pct":5,"gross_value":2331,"revenue":2214.45},{"order_id":1040,"order_date":"2024-01-19","month":"2024-01","channel":"Website","category":"Haircare","product_name":"Scalp Serum","customer_segment":"Bronze","quantity":2,"MRP":529,"discount_pct":5,"gross_value":1058,"revenue":1005.1},{"order_id":1034,"order_date":"2024-02-21","month":"2024-02","channel":"Instagram","category":"Wellness","product_name":"Vitamin D3","customer_segment":"Gold","quantity":3,"MRP":1449,"discount_pct":10,"gross_value":4347,"revenue":3912.3},{"order_id":1031,"order_date":"2024-03-02","month":"2024-03","channel":"WhatsApp","category":"Haircare","product_name":"Hair Oil","customer_segment":"Bronze","quantity":5,"MRP":777,"discount_pct":5,"gross_value":3885,"revenue":3690.75},{"order_id":1020,"order_date":"2024-03-02","month":"2024-03","channel":"App","category":"Wellness","product_name":"Collagen Supplement","customer_segment":"Gold","quantity":5,"MRP":1453,"discount_pct":10,"gross_value":7265,"revenue":6538.5},{"order_id":1018,"order_date":"2024-03-06","month":"2024-03","channel":"App","category":"Haircare","product_name":"Conditioner","customer_segment":"Silver","quantity":5,"MRP":1395,"discount_pct":5,"gross_value":6975,"revenue":6626.25},{"order_id":1042,"order_date":"2024-03-20","month":"2024-03","channel":"WhatsApp","category":"Haircare","product_name":"Hair Mask","customer_segment":"Bronze","quantity":4,"MRP":1047,"discount_pct":10,"gross_value":4188,"revenue":3769.2},{"order_id":1016,"order_date":"2024-03-23","month":"2024-03","channel":"Instagram","category":"Skincare","product_name":"Night Cream","customer_segment":"Silver","quantity":3,"MRP":1488,"discount_pct":10,"gross_value":4464,"revenue":4017.6},{"order_id":1027,"order_date":"2024-03-26","month":"2024-03","channel":"WhatsApp","category":"Haircare","product_name":"Scalp Serum","customer_segment":"Silver","quantity":1,"MRP":529,"discount_pct":5,"gross_value":529,"revenue":502.55},{"order_id":1029,"order_date":"2024-04-07","month":"2024-04","channel":"Amazon","category":"Skincare","product_name":"Moisturizer","customer_segment":"Silver","quantity":1,"MRP":1358,"discount_pct":15,"gross_value":1358,"revenue":1154.3},{"order_id":1025,"order_date":"2024-04-08","month":"2024-04","channel":"Website","category":"Haircare","product_name":"Scalp Serum","customer_segment":"Gold","quantity":2,"MRP":529,"discount_pct":5,"gross_value":1058,"revenue":1005.1},{"order_id":1003,"order_date":"2024-04-11","month":"2024-04","channel":"App","category":"Makeup","product_name":"Lipstick","customer_segment":"Silver","quantity":4,"MRP":955,"discount_pct":5,"gross_value":3820,"revenue":3629.0},{"order_id":1012,"order_date":"2024-04-22","month":"2024-04","channel":"WhatsApp","category":"Skincare","product_name":"Vitamin C Serum","customer_segment":"Gold","quantity":1,"MRP":1813,"discount_pct":7,"gross_value":1813,"revenue":1686.09},{"order_id":1044,"order_date":"2024-04-23","month":"2024-04","channel":"WhatsApp","category":"Wellness","product_name":"Omega 3","customer_segment":"Gold","quantity":2,"MRP":1161,"discount_pct":8,"gross_value":2322,"revenue":2136.24},{"order_id":1022,"order_date":"2024-05-01","month":"2024-05","channel":"Amazon","category":"Haircare","product_name":"Hair Oil","customer_segment":"Gold","quantity":2,"MRP":777,"discount_pct":20,"gross_value":1554,"revenue":1243.2},{"order_id":1048,"order_date":"2024-05-10","month":"2024-05","channel":"Instagram","category":"Skincare","product_name":"Night Cream","customer_segment":"Gold","quantity":5,"MRP":1488,"discount_pct":10,"gross_value":7440,"revenue":6696.0},{"order_id":1015,"order_date":"2024-05-14","month":"2024-05","channel":"Instagram","category":"Skincare","product_name":"Moisturizer","customer_segment":"Silver","quantity":5,"MRP":1358,"discount_pct":8,"gross_value":6790,"revenue":6246.8},{"order_id":1011,"order_date":"2024-05-15","month":"2024-05","channel":"Instagram","category":"Wellness","product_name":"Ashwagandha","customer_segment":"Gold","quantity":4,"MRP":1410,"discount_pct":10,"gross_value":5640,"revenue":5076.0},{"order_id":1033,"order_date":"2024-05-15","month":"2024-05","channel":"Amazon","category":"Makeup","product_name":"Foundation","customer_segment":"Silver","quantity":1,"MRP":171,"discount_pct":22,"gross_value":171,"revenue":133.38},{"order_id":1028,"order_date":"2024-05-15","month":"2024-05","channel":"App","category":"Wellness","product_name":"Probiotic Blend","customer_segment":"Bronze","quantity":5,"MRP":1441,"discount_pct":8,"gross_value":7205,"revenue":6628.6},{"order_id":1037,"order_date":"2024-05-24","month":"2024-05","channel":"Website","category":"Haircare","product_name":"Conditioner","customer_segment":"Silver","quantity":5,"MRP":1395,"discount_pct":8,"gross_value":6975,"revenue":6417.0},{"order_id":1035,"order_date":"2024-05-25","month":"2024-05","channel":"Instagram","category":"Wellness","product_name":"Ashwagandha","customer_segment":"Gold","quantity":5,"MRP":1410,"discount_pct":10,"gross_value":7050,"revenue":6345.0},{"order_id":1007,"order_date":"2024-05-28","month":"2024-05","channel":"App","category":"Skincare","product_name":"Face Wash","customer_segment":"Gold","quantity":3,"MRP":1215,"discount_pct":0,"gross_value":3645,"revenue":3645.0},{"order_id":1017,"order_date":"2024-06-06","month":"2024-06","channel":"App","category":"Skincare","product_name":"Vitamin C Serum","customer_segment":"Gold","quantity":4,"MRP":1813,"discount_pct":5,"gross_value":7252,"revenue":6889.4},{"order_id":1045,"order_date":"2024-06-17","month":"2024-06","channel":"Instagram","category":"Wellness","product_name":"Omega 3","customer_segment":"Gold","quantity":5,"MRP":1161,"discount_pct":12,"gross_value":5805,"revenue":5108.4},{"order_id":1047,"order_date":"2024-06-25","month":"2024-06","channel":"App","category":"Makeup","product_name":"Eyeliner","customer_segment":"Bronze","quantity":5,"MRP":1426,"discount_pct":5,"gross_value":7130,"revenue":6773.5},{"order_id":1005,"order_date":"2024-07-02","month":"2024-07","channel":"Website","category":"Wellness","product_name":"Collagen Supplement","customer_segment":"Bronze","quantity":4,"MRP":1453,"discount_pct":12,"gross_value":5812,"revenue":5114.56},{"order_id":1041,"order_date":"2024-07-02","month":"2024-07","channel":"Amazon","category":"Skincare","product_name":"Moisturizer","customer_segment":"Gold","quantity":5,"MRP":1358,"discount_pct":15,"gross_value":6790,"revenue":5771.5},{"order_id":1008,"order_date":"2024-07-08","month":"2024-07","channel":"App","category":"Skincare","product_name":"Night Cream","customer_segment":"Silver","quantity":2,"MRP":1488,"discount_pct":5,"gross_value":2976,"revenue":2827.2},{"order_id":1010,"order_date":"2024-07-24","month":"2024-07","channel":"App","category":"Wellness","product_name":"Vitamin D3","customer_segment":"Gold","quantity":4,"MRP":1449,"discount_pct":5,"gross_value":5796,"revenue":5506.2},{"order_id":1050,"order_date":"2024-07-25","month":"2024-07","channel":"App","category":"Haircare","product_name":"Hair Mask","customer_segment":"Silver","quantity":4,"MRP":1047,"discount_pct":10,"gross_value":4188,"revenue":3769.2},{"order_id":1024,"order_date":"2024-08-04","month":"2024-08","channel":"App","category":"Skincare","product_name":"Vitamin C Serum","customer_segment":"Silver","quantity":4,"MRP":1813,"discount_pct":5,"gross_value":7252,"revenue":6889.4},{"order_id":1049,"order_date":"2024-08-08","month":"2024-08","channel":"Instagram","category":"Wellness","product_name":"Collagen Supplement","customer_segment":"Gold","quantity":3,"MRP":1453,"discount_pct":15,"gross_value":4359,"revenue":3705.15},{"order_id":1026,"order_date":"2024-08-14","month":"2024-08","channel":"App","category":"Skincare","product_name":"Vitamin C Serum","customer_segment":"Bronze","quantity":5,"MRP":1813,"discount_pct":5,"gross_value":9065,"revenue":8611.75},{"order_id":1039,"order_date":"2024-08-14","month":"2024-08","channel":"Amazon","category":"Skincare","product_name":"Vitamin C Serum","customer_segment":"Silver","quantity":1,"MRP":1813,"discount_pct":18,"gross_value":1813,"revenue":1486.66},{"order_id":1009,"order_date":"2024-08-24","month":"2024-08","channel":"Instagram","category":"Haircare","product_name":"Conditioner","customer_segment":"Silver","quantity":1,"MRP":1395,"discount_pct":10,"gross_value":1395,"revenue":1255.5},{"order_id":1023,"order_date":"2024-08-30","month":"2024-08","channel":"Instagram","category":"Makeup","product_name":"Lipstick","customer_segment":"Gold","quantity":1,"MRP":955,"discount_pct":15,"gross_value":955,"revenue":811.75},{"order_id":1030,"order_date":"2024-09-28","month":"2024-09","channel":"WhatsApp","category":"Skincare","product_name":"Sunscreen SPF50","customer_segment":"Gold","quantity":1,"MRP":1442,"discount_pct":8,"gross_value":1442,"revenue":1326.64},{"order_id":1019,"order_date":"2024-10-03","month":"2024-10","channel":"WhatsApp","category":"Wellness","product_name":"Probiotic Blend","customer_segment":"Bronze","quantity":3,"MRP":1441,"discount_pct":8,"gross_value":4323,"revenue":3977.16},{"order_id":1006,"order_date":"2024-10-09","month":"2024-10","channel":"App","category":"Wellness","product_name":"Ashwagandha","customer_segment":"Silver","quantity":2,"MRP":1410,"discount_pct":5,"gross_value":2820,"revenue":2679.0},{"order_id":1002,"order_date":"2024-10-29","month":"2024-10","channel":"Amazon","category":"Skincare","product_name":"Sunscreen SPF50","customer_segment":"Silver","quantity":2,"MRP":1442,"discount_pct":20,"gross_value":2884,"revenue":2307.2},{"order_id":1013,"order_date":"2024-11-01","month":"2024-11","channel":"Website","category":"Makeup","product_name":"Eyeliner","customer_segment":"Gold","quantity":3,"MRP":1426,"discount_pct":8,"gross_value":4278,"revenue":3935.76},{"order_id":1038,"order_date":"2024-11-20","month":"2024-11","channel":"App","category":"Skincare","product_name":"Vitamin C Serum","customer_segment":"Silver","quantity":3,"MRP":1813,"discount_pct":5,"gross_value":5439,"revenue":5167.05},{"order_id":1001,"order_date":"2024-11-23","month":"2024-11","channel":"Website","category":"Haircare","product_name":"Hair Mask","customer_segment":"Gold","quantity":2,"MRP":1047,"discount_pct":12,"gross_value":2094,"revenue":1842.72},{"order_id":1032,"order_date":"2024-12-02","month":"2024-12","channel":"App","category":"Wellness","product_name":"Omega 3","customer_segment":"Silver","quantity":2,"MRP":1161,"discount_pct":5,"gross_value":2322,"revenue":2205.9},{"order_id":1036,"order_date":"2024-12-05","month":"2024-12","channel":"Instagram","category":"Wellness","product_name":"Collagen Supplement","customer_segment":"Gold","quantity":1,"MRP":1453,"discount_pct":15,"gross_value":1453,"revenue":1235.05},{"order_id":1043,"order_date":"2024-12-08","month":"2024-12","channel":"WhatsApp","category":"Wellness","product_name":"Vitamin D3","customer_segment":"Bronze","quantity":1,"MRP":1449,"discount_pct":8,"gross_value":1449,"revenue":1333.08},{"order_id":1014,"order_date":"2024-12-15","month":"2024-12","channel":"Website","category":"Wellness","product_name":"Collagen Supplement","customer_segment":"Bronze","quantity":3,"MRP":1453,"discount_pct":12,"gross_value":4359,"revenue":3835.92},{"order_id":1004,"order_date":"2024-12-23","month":"2024-12","channel":"Website","category":"Haircare","product_name":"Hair Mask","customer_segment":"Silver","quantity":3,"MRP":1047,"discount_pct":12,"gross_value":3141,"revenue":2764.08}];
+
+const CHANNELS = ["App", "Website", "Instagram", "Amazon", "WhatsApp"];
+const CHANNEL_COLORS = {
+  App: "#2F6F68", Website: "#6A5FA8", Instagram: "#C04F7C", Amazon: "#D38B27", WhatsApp: "#3E9950"
+};
+const SEGMENTS = ["Gold", "Silver", "Bronze"];
+const MONTHS = ["2024-01","2024-02","2024-03","2024-04","2024-05","2024-06","2024-07","2024-08","2024-09","2024-10","2024-11","2024-12"];
+const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const INK = "#1E2B2A", MUTED = "#5E6B69", RULE = "#E6EBE8", SPRUCE = "#2F5D57";
+
+const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const int = new Intl.NumberFormat("en-IN");
+const fmtPct = v => (v === null || !isFinite(v)) ? "\u2013" : v.toFixed(2) + "%";
+function compactINR(v) {
+  const a = Math.abs(v);
+  if (a >= 100000) return "\u20B9" + (v / 100000).toFixed(1).replace(/\.0$/, "") + "L";
+  if (a >= 1000) return "\u20B9" + Math.round(v / 1000) + "K";
+  return "\u20B9" + v;
+}
+
+const state = { channel: "All", category: "All", segment: "All" };
+const sortState = { key: "revenue", dir: "desc" };
+
+/* ---------- Aggregation helpers ---------- */
+function summarise(rows) {
+  const ids = new Set();
+  let units = 0, gross = 0, revenue = 0;
+  for (const r of rows) { ids.add(r.order_id); units += r.quantity; gross += r.gross_value; revenue += r.revenue; }
+  const orders = ids.size;
+  const discount = gross - revenue;
+  return {
+    orders, units, gross, revenue, discount,
+    aov: orders ? revenue / orders : null,
+    effDisc: gross ? (discount / gross) * 100 : null
+  };
+}
+function groupBy(rows, keyFn) {
+  const map = new Map();
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(r);
+  }
+  const out = new Map();
+  for (const [k, list] of map) out.set(k, summarise(list));
+  return out;
+}
+function filtered() {
+  return DATA.filter(r =>
+    (state.channel === "All" || r.channel === state.channel) &&
+    (state.category === "All" || r.category === state.category) &&
+    (state.segment === "All" || r.customer_segment === state.segment));
+}
+
+/* ---------- Filters ---------- */
+function fillSelect(id, values) {
+  const el = document.getElementById(id);
+  el.innerHTML = ["All", ...values].map(v => `<option value="${v}">${v}</option>`).join("");
+}
+fillSelect("f-channel", CHANNELS.filter(c => DATA.some(r => r.channel === c)));
+fillSelect("f-category", [...new Set(DATA.map(r => r.category))].sort());
+fillSelect("f-segment", SEGMENTS.filter(s => DATA.some(r => r.customer_segment === s)));
+
+const selects = { channel: "f-channel", category: "f-category", segment: "f-segment" };
+for (const [key, id] of Object.entries(selects)) {
+  document.getElementById(id).addEventListener("change", e => { state[key] = e.target.value; render(); });
+}
+document.getElementById("reset").addEventListener("click", () => {
+  for (const [key, id] of Object.entries(selects)) { state[key] = "All"; document.getElementById(id).value = "All"; }
+  render();
+});
+
+/* ---------- Charts ---------- */
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+Chart.defaults.font.size = 12;
+Chart.defaults.color = MUTED;
+Chart.defaults.animation.duration = reduceMotion ? 0 : 350;
+Chart.defaults.plugins.tooltip.backgroundColor = INK;
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.maintainAspectRatio = false;
+
+const gridOpts = { color: RULE, drawTicks: false };
+const noGrid = { display: false };
+
+const chRevenueChart = new Chart(document.getElementById("c-ch-revenue"), {
+  type: "bar",
+  data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 4, maxBarThickness: 46 }] },
+  options: {
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => " " + inr.format(c.parsed.y) } } },
+    scales: { x: { grid: noGrid }, y: { beginAtZero: true, grid: gridOpts, border: { display: false }, ticks: { padding: 8, callback: v => compactINR(v) } } }
+  }
+});
+
+const chDiscountChart = new Chart(document.getElementById("c-ch-discount"), {
+  type: "bar",
+  data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 4, maxBarThickness: 46 }] },
+  options: {
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => " " + c.parsed.y.toFixed(2) + "% effective discount" } } },
+    scales: { x: { grid: noGrid }, y: { beginAtZero: true, grid: gridOpts, border: { display: false }, ticks: { padding: 8, callback: v => v + "%" } } }
+  }
+});
+
+const chOrdersChart = new Chart(document.getElementById("c-ch-orders"), {
+  type: "doughnut",
+  data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderColor: "#fff", borderWidth: 2 }] },
+  options: {
+    cutout: "60%",
+    plugins: {
+      legend: { position: "bottom", labels: { usePointStyle: true, pointStyle: "circle", boxWidth: 8, padding: 14, color: INK } },
+      tooltip: { callbacks: { label: c => {
+        const total = c.dataset.data.reduce((a, b) => a + b, 0);
+        return ` ${c.label}: ${c.parsed} orders (${(100 * c.parsed / total).toFixed(1)}%)`;
+      } } }
+    }
+  }
+});
+
+const productChart = new Chart(document.getElementById("c-products"), {
+  type: "bar",
+  data: { labels: [], datasets: [{ data: [], backgroundColor: SPRUCE, borderRadius: 3, barPercentage: 0.78, categoryPercentage: 0.9 }] },
+  options: {
+    indexAxis: "y",
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => " " + inr.format(c.parsed.x) } } },
+    scales: {
+      x: { beginAtZero: true, grid: gridOpts, border: { display: false }, ticks: { padding: 6, callback: v => compactINR(v) } },
+      y: { grid: noGrid, ticks: { color: INK, autoSkip: false } }
+    }
+  }
+});
+
+const trendChart = new Chart(document.getElementById("c-trend"), {
+  type: "line",
+  data: { labels: MONTH_LABELS, datasets: [{
+    data: [], borderColor: SPRUCE, backgroundColor: "rgba(47, 93, 87, 0.10)", fill: true,
+    tension: 0.3, cubicInterpolationMode: "monotone", pointRadius: 3.5, pointHoverRadius: 6, pointBackgroundColor: SPRUCE, borderWidth: 2
+  }] },
+  options: {
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => " " + inr.format(c.parsed.y) } } },
+    scales: { x: { grid: noGrid }, y: { beginAtZero: true, grid: gridOpts, border: { display: false }, ticks: { padding: 8, callback: v => compactINR(v) } } }
+  }
+});
+
+/* ---------- Render ---------- */
+function setText(id, text) { document.getElementById(id).textContent = text; }
+
+function renderKPIs(rows) {
+  const s = summarise(rows);
+  setText("k-revenue", inr.format(s.revenue));
+  setText("k-gross", "from " + inr.format(s.gross) + " gross value");
+  setText("k-orders", int.format(s.orders));
+  setText("k-units", int.format(s.units));
+  setText("k-aov", s.aov === null ? "\u2013" : inr.format(s.aov));
+  setText("k-discount", inr.format(s.discount));
+  setText("k-effdisc", fmtPct(s.effDisc));
+
+  const active = Object.entries(state).filter(([, v]) => v !== "All").map(([, v]) => v);
+  setText("scope", active.length
+    ? `Showing ${s.orders} of ${new Set(DATA.map(r => r.order_id)).size} orders for ${active.join(", ")}`
+    : `Showing all ${s.orders} orders, January to December 2024`);
+  document.getElementById("notice").classList.toggle("show", rows.length === 0);
+}
+
+function renderChannels(rows) {
+  const byCh = groupBy(rows, r => r.channel);
+  const chans = CHANNELS.filter(c => byCh.has(c));
+  const colors = chans.map(c => CHANNEL_COLORS[c]);
+
+  chRevenueChart.data.labels = chans;
+  chRevenueChart.data.datasets[0].data = chans.map(c => +byCh.get(c).revenue.toFixed(2));
+  chRevenueChart.data.datasets[0].backgroundColor = colors;
+  chRevenueChart.update();
+
+  chDiscountChart.data.labels = chans;
+  chDiscountChart.data.datasets[0].data = chans.map(c => +byCh.get(c).effDisc.toFixed(2));
+  chDiscountChart.data.datasets[0].backgroundColor = colors;
+  chDiscountChart.update();
+
+  chOrdersChart.data.labels = chans;
+  chOrdersChart.data.datasets[0].data = chans.map(c => byCh.get(c).orders);
+  chOrdersChart.data.datasets[0].backgroundColor = colors;
+  chOrdersChart.update();
+}
+
+function productRows(rows) {
+  const byProd = new Map();
+  for (const r of rows) {
+    if (!byProd.has(r.product_name)) byProd.set(r.product_name, { category: r.category, list: [] });
+    byProd.get(r.product_name).list.push(r);
+  }
+  return [...byProd].map(([product, { category, list }]) => {
+    const s = summarise(list);
+    return { product, category, orders: s.orders, units: s.units, gross: s.gross, revenue: s.revenue, disc: s.effDisc };
+  });
+}
+
+function renderProducts(rows) {
+  const prods = productRows(rows);
+
+  const byRevenue = [...prods].sort((a, b) => b.revenue - a.revenue);
+  productChart.data.labels = byRevenue.map(p => p.product);
+  productChart.data.datasets[0].data = byRevenue.map(p => +p.revenue.toFixed(2));
+  productChart.update();
+
+  const { key, dir } = sortState;
+  const sign = dir === "asc" ? 1 : -1;
+  prods.sort((a, b) => {
+    const x = a[key], y = b[key];
+    return (typeof x === "string" ? x.localeCompare(y) : x - y) * sign;
+  });
+
+  const tbody = document.querySelector("#t-products tbody");
+  tbody.innerHTML = prods.length
+    ? prods.map(p => `<tr>
+        <td>${p.product}</td>
+        <td class="cat">${p.category}</td>
+        <td class="num">${int.format(p.orders)}</td>
+        <td class="num">${int.format(p.units)}</td>
+        <td class="num">${inr.format(p.gross)}</td>
+        <td class="num">${inr.format(p.revenue)}</td>
+        <td class="num">${fmtPct(p.disc)}</td>
+      </tr>`).join("")
+    : `<tr class="empty-row"><td colspan="7">No products match these filters.</td></tr>`;
+
+  document.querySelectorAll("#t-products th").forEach(th => {
+    th.setAttribute("aria-sort", th.dataset.key === key ? (dir === "asc" ? "ascending" : "descending") : "none");
+  });
+}
+
+document.querySelectorAll("#t-products th").forEach(th => {
+  th.querySelector("button").addEventListener("click", () => {
+    const key = th.dataset.key;
+    if (sortState.key === key) sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+    else { sortState.key = key; sortState.dir = (key === "product" || key === "category") ? "asc" : "desc"; }
+    renderProducts(filtered());
+  });
+});
+
+function renderTrend(rows) {
+  const byMonth = groupBy(rows, r => r.month);
+  trendChart.data.datasets[0].data = MONTHS.map(m => byMonth.has(m) ? +byMonth.get(m).revenue.toFixed(2) : 0);
+  trendChart.update();
+}
+
+function renderMatrix(rows) {
+  const table = document.getElementById("t-matrix");
+  const cats = [...new Set(rows.map(r => r.category))].sort();
+  const chans = CHANNELS.filter(c => rows.some(r => r.channel === c));
+
+  if (!rows.length) {
+    table.querySelector("thead").innerHTML = "";
+    table.querySelector("tbody").innerHTML = `<tr class="empty-row"><td>No orders match these filters.</td></tr>`;
+    return;
+  }
+
+  const cell = new Map();
+  for (const r of rows) {
+    const k = r.category + "|" + r.channel;
+    cell.set(k, (cell.get(k) || 0) + r.revenue);
+  }
+  const max = Math.max(...cell.values());
+
+  table.querySelector("thead").innerHTML =
+    `<tr><th>Category</th>${chans.map(c => `<th>${c}</th>`).join("")}<th>Total</th></tr>`;
+
+  const body = cats.map(cat => {
+    let rowTotal = 0;
+    const tds = chans.map(ch => {
+      const v = cell.get(cat + "|" + ch) || 0;
+      rowTotal += v;
+      const alpha = v ? 0.08 + 0.72 * (v / max) : 0;
+      const style = `background-color: rgba(47, 93, 87, ${alpha.toFixed(3)});${alpha > 0.45 ? " color: #fff;" : ""}`;
+      return `<td class="cell num" style="${style}">${v ? inr.format(v) : "\u2013"}</td>`;
+    }).join("");
+    return `<tr><td>${cat}</td>${tds}<td class="total num">${inr.format(rowTotal)}</td></tr>`;
+  });
+
+  const colTotals = chans.map(ch => cats.reduce((sum, cat) => sum + (cell.get(cat + "|" + ch) || 0), 0));
+  const grand = colTotals.reduce((a, b) => a + b, 0);
+  body.push(`<tr class="total"><td>Total</td>${colTotals.map(v => `<td class="num">${inr.format(v)}</td>`).join("")}<td class="num">${inr.format(grand)}</td></tr>`);
+
+  table.querySelector("tbody").innerHTML = body.join("");
+}
+
+function render() {
+  const rows = filtered();
+  renderKPIs(rows);
+  renderChannels(rows);
+  renderProducts(rows);
+  renderTrend(rows);
+  renderMatrix(rows);
+}
+
+render();
+</script>
+</body>
+</html>
